@@ -51,6 +51,16 @@ class AmazonKinesisService implements InitializingBean {
 
     /**
      *
+     * @param streamName
+     * @param shardCount
+     */
+    void createStream(String streamName,
+                      int shardCount = 1) {
+        client.createStream(streamName, shardCount)
+    }
+
+    /**
+     *
      * @param shardCount
      */
     void createStream(int shardCount = 1) {
@@ -66,7 +76,7 @@ class AmazonKinesisService implements InitializingBean {
     String decodeRecordData(Record record) {
         String data = ''
         try {
-            // For this app, we interpret the payload as UTF-8 chars.
+            // Payload as UTF-8 chars.
             data = decoder.decode(record.data).toString()
         } catch (CharacterCodingException e) {
             log.error "Malformed data for record: ${record}", e
@@ -76,196 +86,26 @@ class AmazonKinesisService implements InitializingBean {
 
     /**
      *
-     * @return
+     * @param streamName
      */
-    DescribeStreamResult describeStream() {
+    void deleteStream(String streamName) {
+        client.deleteStream(streamName)
+    }
+
+    /**
+     *
+     */
+    void deleteStream() {
         assertDefaultStreamName()
-        describeStream(defaultStreamName)
-    }
-
-    /**
-     *
-     * @param shardId
-     * @return
-     */
-    Shard getShard(String shardId) {
-        getShard(defaultStreamName, shardId)
-    }
-
-    /**
-     *
-     * @param shard
-     * @return
-     */
-    Record getShardOldestRecord(Shard shard) {
-        assertDefaultStreamName()
-        List records = listShardRecords(defaultStreamName, shard, 'TRIM_HORIZON', '', 1)
-        if (records) {
-            records.first()
-        }
-    }
-
-    /**
-     *
-     * @param shard
-     * @param sequenceNumber
-     * @return
-     */
-    Record getShardRecordAtSequenceNumber(Shard shard,
-                                          String sequenceNumber) {
-        assertDefaultStreamName()
-        List records = listShardRecords(defaultStreamName, shard, 'AT_SEQUENCE_NUMBER', sequenceNumber, 1)
-        if (records) {
-            records.first()
-        }
-    }
-
-    /**
-     *
-     * @return
-     */
-    List<String> listStreamNames() {
-        client.listStreams().streamNames
-    }
-
-    /**
-     *
-     * @param shard
-     * @param startingSequenceNumber
-     * @param limit
-     * @param batchLimit
-     * @return
-     */
-    List<Record> listShardRecordsAfterSequenceNumber(Shard shard,
-                                                     String startingSequenceNumber,
-                                                     int limit = DEFAULT_LIST_RECORDS_LIMIT,
-                                                     int batchLimit = 0) {
-        assertDefaultStreamName()
-        listShardRecords(defaultStreamName, shard, 'AFTER_SEQUENCE_NUMBER', startingSequenceNumber, limit, batchLimit)
-    }
-
-    /**
-     *
-     * @param shard
-     * @param limit
-     * @param batchLimit
-     * @return
-     */
-    List<Record> listShardRecordsFromHorizon(Shard shard,
-                                             int limit = DEFAULT_LIST_RECORDS_LIMIT,
-                                             int batchLimit = 0) {
-        assertDefaultStreamName()
-        listShardRecords(defaultStreamName, shard, 'TRIM_HORIZON', '', limit, batchLimit)
-    }
-
-
-    /**
-     *
-     * @return
-     */
-    List<Shard> listShards() {
-        assertDefaultStreamName()
-        listShards(defaultStreamName)
-    }
-
-    /**
-     *
-     * @param event
-     * @return
-     */
-    String putEvent(AbstractEvent event) {
-        if (serviceConfig?.consumerFilterKey) {
-            event.consumerFilterKey = serviceConfig?.consumerFilterKey
-        }
-        putRecord(event.partitionKey, event.encodeAsJSON().toString())
-    }
-
-    /**
-     *
-     * @param events
-     * @return
-     */
-    String putEvents(List<AbstractEvent> events) {
-        assert events.size() < MAX_PUT_RECORDS_SIZE, "Max put events size is ${MAX_PUT_RECORDS_SIZE}"
-        List<PutRecordsRequestEntry> records = []
-        events.each { AbstractEvent event ->
-            if (serviceConfig?.consumerFilterKey) {
-                event.consumerFilterKey = serviceConfig.consumerFilterKey
-            }
-            records << new PutRecordsRequestEntry(
-                    data: ByteBuffer.wrap(event.encodeAsJSON().toString().bytes),
-                    partitionKey: event.partitionKey
-            )
-        }
-        putRecords(records)
-    }
-
-    /**
-     *
-     * @param partitionKey
-     * @param data
-     * @param sequenceNumberForOrdering
-     * @return
-     */
-    String putRecord(String partitionKey,
-                     String data,
-                     String sequenceNumberForOrdering = '') {
-        assertDefaultStreamName()
-        putRecord(defaultStreamName, partitionKey, data, sequenceNumberForOrdering)
-    }
-
-    /**
-     *
-     * @param records
-     * @return
-     */
-    PutRecordsResult putRecords(List<PutRecordsRequestEntry> records) {
-        assertDefaultStreamName()
-        putRecords(defaultStreamName, records)
+        client.deleteStream(defaultStreamName)
     }
 
     /**
      *
      * @param streamName
-     * @param records
      * @return
      */
-    PutRecordsResult putRecords(String streamName,
-                                List<PutRecordsRequestEntry> records) {
-        PutRecordsRequest putRecordsRequest = new PutRecordsRequest(
-                records: records,
-                streamName: streamName
-        )
-
-        client.putRecords(putRecordsRequest)
-    }
-
-    /**
-     *
-     * @param shardId1
-     * @param shardId2
-     */
-    void mergeShards(String shardId1,
-                     String shardId2) {
-        mergeShards(defaultStreamName, shardId1, shardId2)
-    }
-
-    /**
-     *
-     * @param shardId
-     */
-    void splitShard(String shardId) {
-        splitShard(defaultStreamName, shardId)
-    }
-
-    // PRIVATE
-
-    protected void createStream(String streamName,
-                                int shardCount = 1) {
-        client.createStream(streamName, shardCount)
-    }
-
-    protected DescribeStreamResult describeStream(String streamName) {
+    DescribeStreamResult describeStream(String streamName) {
         DescribeStreamRequest describeStreamRequest = new DescribeStreamRequest(
                 streamName: streamName
         )
@@ -287,8 +127,23 @@ class AmazonKinesisService implements InitializingBean {
         describeStreamResult
     }
 
-    protected Shard getShard(String streamName,
-                             String shardId) {
+    /**
+     *
+     * @return
+     */
+    DescribeStreamResult describeStream() {
+        assertDefaultStreamName()
+        describeStream(defaultStreamName)
+    }
+
+    /**
+     *
+     * @param streamName
+     * @param shardId
+     * @return
+     */
+    Shard getShard(String streamName,
+                   String shardId) {
         Shard shard
         DescribeStreamResult describeStreamResult = describeStream(streamName)
         if (describeStreamResult.streamDescription.shards) {
@@ -299,13 +154,94 @@ class AmazonKinesisService implements InitializingBean {
         shard
     }
 
-    protected List<Record> listShardRecords(String streamName,
-                                            Shard shard,
-                                            String shardIteratorType,
-                                            String startingSequenceNumber,
-                                            int limit,
-                                            int batchLimit = 0,
-                                            int maxLoopCount = 10) {
+    /**
+     *
+     * @param shardId
+     * @return
+     */
+    Shard getShard(String shardId) {
+        assertDefaultStreamName()
+        getShard(defaultStreamName, shardId)
+    }
+
+    /**
+     *
+     * @param streamName
+     * @param shard
+     * @return
+     */
+    Record getShardOldestRecord(String streamName,
+                                Shard shard) {
+        List records = listShardRecords(streamName, shard, 'TRIM_HORIZON', '', 1)
+        if (records) {
+            records.first()
+        }
+    }
+
+    /**
+     *
+     * @param shard
+     * @return
+     */
+    Record getShardOldestRecord(Shard shard) {
+        assertDefaultStreamName()
+        getShardOldestRecord(defaultStreamName, shard)
+    }
+
+    /**
+     *
+     * @param streamName
+     * @param shard
+     * @param sequenceNumber
+     * @return
+     */
+    Record getShardRecordAtSequenceNumber(String streamName,
+                                          Shard shard,
+                                          String sequenceNumber) {
+        List records = listShardRecords(streamName, shard, 'AT_SEQUENCE_NUMBER', sequenceNumber, 1)
+        if (records) {
+            records.first()
+        }
+    }
+
+    /**
+     *
+     * @param shard
+     * @param sequenceNumber
+     * @return
+     */
+    Record getShardRecordAtSequenceNumber(Shard shard,
+                                          String sequenceNumber) {
+        assertDefaultStreamName()
+        getShardRecordAtSequenceNumber(defaultStreamName, shard, sequenceNumber)
+    }
+
+    /**
+     *
+     * @return
+     */
+    List<String> listStreamNames() {
+        client.listStreams().streamNames
+    }
+
+    /**
+     *
+     * @param streamName
+     * @param shard
+     * @param shardIteratorType
+     * @param startingSequenceNumber
+     * @param limit
+     * @param batchLimit
+     * @param maxLoopCount
+     * @return
+     */
+    List<Record> listShardRecords(String streamName,
+                                  Shard shard,
+                                  String shardIteratorType,
+                                  String startingSequenceNumber,
+                                  int limit,
+                                  int batchLimit = 0,
+                                  int maxLoopCount = 10) {
         List records = []
         // Get shard iterator
         GetShardIteratorRequest getShardIteratorRequest = new GetShardIteratorRequest(
@@ -353,26 +289,174 @@ class AmazonKinesisService implements InitializingBean {
         records.take(limit)
     }
 
-    protected List<Shard> listShards(String streamName) {
+    /**
+     *
+     * @param shard
+     * @param shardIteratorType
+     * @param startingSequenceNumber
+     * @param limit
+     * @param batchLimit
+     * @param maxLoopCount
+     * @return
+     */
+    List<Record> listShardRecords(Shard shard,
+                                  String shardIteratorType,
+                                  String startingSequenceNumber,
+                                  int limit,
+                                  int batchLimit = 0,
+                                  int maxLoopCount = 10) {
+        assertDefaultStreamName()
+        listShardRecords(defaultStreamName, shard, shardIteratorType, startingSequenceNumber, limit, batchLimit, maxLoopCount)
+    }
+
+    /**
+     *
+     * @param streamName
+     * @param shard
+     * @param startingSequenceNumber
+     * @param limit
+     * @param batchLimit
+     * @return
+     */
+    List<Record> listShardRecordsAfterSequenceNumber(String streamName,
+                                                     Shard shard,
+                                                     String startingSequenceNumber,
+                                                     int limit = DEFAULT_LIST_RECORDS_LIMIT,
+                                                     int batchLimit = 0) {
+        listShardRecords(streamName, shard, 'AFTER_SEQUENCE_NUMBER', startingSequenceNumber, limit, batchLimit)
+    }
+
+    /**
+     *
+     * @param shard
+     * @param startingSequenceNumber
+     * @param limit
+     * @param batchLimit
+     * @return
+     */
+    List<Record> listShardRecordsAfterSequenceNumber(Shard shard,
+                                                     String startingSequenceNumber,
+                                                     int limit = DEFAULT_LIST_RECORDS_LIMIT,
+                                                     int batchLimit = 0) {
+        assertDefaultStreamName()
+        listShardRecordsAfterSequenceNumber(defaultStreamName, shard, startingSequenceNumber, limit, batchLimit)
+    }
+
+    /**
+     *
+     * @param streamName
+     * @param shard
+     * @param limit
+     * @param batchLimit
+     * @return
+     */
+    List<Record> listShardRecordsFromHorizon(String streamName,
+                                             Shard shard,
+                                             int limit = DEFAULT_LIST_RECORDS_LIMIT,
+                                             int batchLimit = 0) {
+        listShardRecords(streamName, shard, 'TRIM_HORIZON', '', limit, batchLimit)
+    }
+
+    /**
+     *
+     * @param shard
+     * @param limit
+     * @param batchLimit
+     * @return
+     */
+    List<Record> listShardRecordsFromHorizon(Shard shard,
+                                             int limit = DEFAULT_LIST_RECORDS_LIMIT,
+                                             int batchLimit = 0) {
+        assertDefaultStreamName()
+        listShardRecordsFromHorizon(defaultStreamName, shard, limit, batchLimit)
+    }
+
+    /**
+     *
+     * @param streamName
+     * @return
+     */
+    List<Shard> listShards(String streamName) {
         describeStream(streamName)?.streamDescription?.shards
     }
 
-    protected void mergeShards(String streamName,
-                               String shardId1,
-                               String shardId2) {
-        MergeShardsRequest mergeShardsRequest = new MergeShardsRequest(
-                streamName: streamName,
-                shardToMerge: shardId1,
-                adjacentShardToMerge: shardId2
-        )
-
-        client.mergeShards(mergeShardsRequest)
+    /**
+     *
+     * @return
+     */
+    List<Shard> listShards() {
+        assertDefaultStreamName()
+        listShards(defaultStreamName)
     }
 
-    protected String putRecord(String streamName,
-                               String partitionKey,
-                               String data,
-                               String sequenceNumberForOrdering) {
+    /**
+     *
+     * @param streamName
+     * @param event
+     * @return
+     */
+    String putEvent(String streamName,
+                    AbstractEvent event) {
+        if (serviceConfig?.consumerFilterKey) {
+            event.consumerFilterKey = serviceConfig?.consumerFilterKey
+        }
+        putRecord(streamName, event.partitionKey, event.encodeAsJSON().toString())
+    }
+
+    /**
+     *
+     * @param event
+     * @return
+     */
+    String putEvent(AbstractEvent event) {
+        assertDefaultStreamName()
+        putEvent(defaultStreamName, event)
+    }
+
+    /**
+     *
+     * @param streamName
+     * @param events
+     * @return
+     */
+    PutRecordsResult putEvents(String streamName,
+                     List<AbstractEvent> events) {
+        assert events.size() < MAX_PUT_RECORDS_SIZE, "Max put events size is ${MAX_PUT_RECORDS_SIZE}"
+        List<PutRecordsRequestEntry> records = []
+        events.each { AbstractEvent event ->
+            if (serviceConfig?.consumerFilterKey) {
+                event.consumerFilterKey = serviceConfig.consumerFilterKey
+            }
+            records << new PutRecordsRequestEntry(
+                    data: ByteBuffer.wrap(event.encodeAsJSON().toString().bytes),
+                    partitionKey: event.partitionKey
+            )
+        }
+        putRecords(streamName, records)
+    }
+
+    /**
+     *
+     * @param events
+     * @return
+     */
+    PutRecordsResult putEvents(List<AbstractEvent> events) {
+        assertDefaultStreamName()
+        putEvents(defaultStreamName, events)
+    }
+
+    /**
+     *
+     * @param streamName
+     * @param partitionKey
+     * @param data
+     * @param sequenceNumberForOrdering
+     * @return
+     */
+    String putRecord(String streamName,
+                     String partitionKey,
+                     String data,
+                     String sequenceNumberForOrdering) {
         PutRecordRequest putRecordRequest = new PutRecordRequest(
                 data: ByteBuffer.wrap(data.bytes),
                 partitionKey: partitionKey,
@@ -386,17 +470,84 @@ class AmazonKinesisService implements InitializingBean {
         putRecordResult.sequenceNumber
     }
 
-    protected void splitShard(String streamName,
-                              String shardId) {
-        Shard shard = getShard(shardId)
-        assert shard, "Shard not found for shardId=$shardId"
-
-        splitShard(streamName, shard)
+    /**
+     *
+     * @param partitionKey
+     * @param data
+     * @param sequenceNumberForOrdering
+     * @return
+     */
+    String putRecord(String partitionKey,
+                     String data,
+                     String sequenceNumberForOrdering) {
+        assertDefaultStreamName()
+        putRecord(defaultStreamName, partitionKey, data, sequenceNumberForOrdering)
     }
 
-    protected void splitShard(String streamName,
-                              Shard shard,
-                              String newStartingHashKey = '') {
+    /**
+     *
+     * @param streamName
+     * @param records
+     * @return
+     */
+    PutRecordsResult putRecords(String streamName,
+                                List<PutRecordsRequestEntry> records) {
+        PutRecordsRequest putRecordsRequest = new PutRecordsRequest(
+                records: records,
+                streamName: streamName
+        )
+
+        client.putRecords(putRecordsRequest)
+    }
+
+    /**
+     *
+     * @param records
+     * @return
+     */
+    PutRecordsResult putRecords(List<PutRecordsRequestEntry> records) {
+        assertDefaultStreamName()
+        putRecords(defaultStreamName, records)
+    }
+
+    /**
+     *
+     * @param streamName
+     * @param shardId1
+     * @param shardId2
+     */
+    void mergeShards(String streamName,
+                     String shardId1,
+                     String shardId2) {
+        MergeShardsRequest mergeShardsRequest = new MergeShardsRequest(
+                streamName: streamName,
+                shardToMerge: shardId1,
+                adjacentShardToMerge: shardId2
+        )
+
+        client.mergeShards(mergeShardsRequest)
+    }
+
+    /**
+     *
+     * @param shardId1
+     * @param shardId2
+     */
+    void mergeShards(String shardId1,
+                     String shardId2) {
+        assertDefaultStreamName()
+        mergeShards(defaultStreamName, shardId1, shardId2)
+    }
+
+    /**
+     *
+     * @param streamName
+     * @param shard
+     * @param newStartingHashKey
+     */
+    void splitShard(String streamName,
+                    Shard shard,
+                    String newStartingHashKey = '') {
         if (!newStartingHashKey) {
             // Determine the hash key value that is half-way between the lowest and highest values in the shard
             BigInteger startingHashKey = new BigInteger(shard.hashKeyRange.startingHashKey)
@@ -411,6 +562,26 @@ class AmazonKinesisService implements InitializingBean {
         )
 
         client.splitShard(splitShardRequest)
+    }
+
+    /**
+     *
+     * @param streamName
+     * @param shardId
+     */
+    void splitShard(String streamName,
+                    String shardId) {
+        Shard shard = getShard(shardId)
+        assert shard, "Shard not found for shardId=$shardId"
+        splitShard(streamName, shard)
+    }
+
+    /**
+     *
+     * @param shardId
+     */
+    void splitShard(String shardId) {
+        splitShard(defaultStreamName, shardId)
     }
 
     // PRIVATE

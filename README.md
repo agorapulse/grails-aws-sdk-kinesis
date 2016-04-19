@@ -1,7 +1,7 @@
 Grails AWS SDK Kinesis Plugin
 =============================
 
-[![Build Status](https://travis-ci.org/agorapulse/grails-aws-sdk-kinesis.svg?token=BpxbA1UyYnNoUwrDNXtN&branch=master)](https://travis-ci.org/agorapulse/grails-aws-sdk-kinesis)
+[![Build Status](https://travis-ci.org/agorapulse/grails-aws-sdk-kinesis.svg?branch=master)](https://travis-ci.org/agorapulse/grails-aws-sdk-kinesis)
 
 # Introduction
 
@@ -38,10 +38,11 @@ Create an AWS account [Amazon Web Services](http://aws.amazon.com/), in order to
 
 ## AWS SDK for Java version
 
-You can override the default AWS SDK for Java version by setting it in your _gradle.properties_:
+You can override the default AWS SDK for Java and Kinesis Client version by setting it in your _gradle.properties_:
 
 ```
 awsJavaSdkVersion=1.10.66
+awsKinesisClientVersion=1.6.2
 ```
 
 ## Credentials
@@ -83,18 +84,19 @@ grails:
             secretKey: {SECRET_KEY} # Global default setting
             region: us-east-1       # Global default setting
             kinesis:
-                accessKey: {ACCESS_KEY} # Service setting (optional)
-                secretKey: {SECRET_KEY} # Service setting (optional)
-                region: eu-west-1       # Service setting (optional)
-                stream: MyStream        # Service setting (optional)
-                consumerFilterKey: ben  # Service setting (optional)
+                accessKey: {ACCESS_KEY} # (optional)
+                secretKey: {SECRET_KEY} # (optional)
+                region: eu-west-1       # (optional)
+                stream: MyStream        # (optional)
+                consumerFilterKey: ben  # (optional)
             
 ```
 
-**stream** allows you define the stream to use for all requests when using **AwsSdkKinesisService**.
-**consumerFilterKey** allows you filter record processing by environment and share a stream between different apps (ex.: devs).
+**stream**: default stream to use when calling methods without `streamName`.
 
-If you use multiple streams, you can create a new service for each stream that inherits from **AmazonKinesisService**.
+**consumerFilterKey**: to filter record processing by environment and share a stream between different apps/teams (ex.: devs).
+
+TIP: if you use multiple streams, you can create a new service for each stream that inherits from **AmazonKinesisService**.
 
 ```groovy
 class MyStreamService extends AmazonKinesisService {
@@ -123,7 +125,90 @@ And some utility abstract classes to create a stream consumer based on [Kinesis 
 * **AbstractEventService**
 * **AbstractRecordProcessor**
 
+## Stream management
+
+```groovy
+// List streams
+amazonKinesisService.listStreamNames().each {
+    println it
+}
+
+// Describe stream
+stream = amazonKinesisService.describeStream('MyStream')
+// Or if you have define default stream
+stream = amazonKinesisService.describeStream()
+
+// List shards
+shards = amazonKinesisService.listShards('MyStream')
+// Or if you have define default stream
+shards = amazonKinesisService.listShards()
+shards.each {
+    println it
+}
+
+// Get a shard
+shard = amazonKinesisService.getShard('MyStream', 'shardId-000000000002')
+// Or if you have define default stream
+shard = amazonKinesisService.getShard('shardId-000000000002')
+```
+
+## Putting records
+
+```groovy
+// Put a single record
+amazonKinesisService.putRecord('MyStream', 'some-partition-key', data, '')
+// Or if you have define default stream
+amazonKinesisService.putRecord('some-partition-key', data, '')
+
+// Put multiple records
+amazonKinesisService.putRecords('MyStream', 'some-partition-key', recordEntries, '')
+// Or if you have define default stream
+amazonKinesisService.putRecords('some-partition-key', recordEntries, '')
+```
+
+## Listing records
+
+Here are some utility methods to debug streams, but you will probably use a consumer app based on [Kinesis Client Library](http://docs.aws.amazon.com/kinesis/latest/dev/developing-consumers-with-kcl.html).
+
+```groovy
+// Get oldest record
+record = amazonKinesisService.getShardOldestRecord('MyStream', shard)
+// Or if you have define default stream
+record = amazonKinesisService.getShardOldestRecord(shard)
+println record
+println amazonKinesisService.decodeRecordData(record)
+
+// Get record at sequence number
+record = amazonKinesisService.getShardRecordAtSequenceNumber('MyStream' ,shard, '49547417246700595154645683227660734817370104972359761954')
+// Or if you have define default stream
+record = amazonKinesisService.getShardRecordAtSequenceNumber(shard, '49547417246700595154645683227660734817370104972359761954')
+println record
+println amazonKinesisService.decodeRecordData(record)
+
+// List oldest records
+records = amazonKinesisService.listShardRecordsFromHorizon('MyStream', shard, 100)
+// Or if you have define default stream
+records = amazonKinesisService.listShardRecordsFromHorizon(shard, 100)
+records.each { record ->
+    println record
+    println amazonKinesisService.decodeRecordData(record)
+}
+
+// List records after sequence number
+amazonKinesisService.listShardRecordsAfterSequenceNumber('MyStream', shard, '49547417246700595154645683227660734817370104972359761954', 100)
+// Or if you have define default stream
+amazonKinesisService.listShardRecordsAfterSequenceNumber(shard, '49547417246700595154645683227660734817370104972359761954', 100)
+records.each { record ->
+    println record
+    println amazonKinesisService.decodeRecordData(record)
+}
+```
+
 ## Defining stream events
+
+The plugin provides some utility to handle JSON based events, on top of Kinesis records.
+
+You must first define your event class with its custom JSON unmarshaller, if required.
 
 ```groovy
 import grails.converters.JSON
@@ -136,7 +221,6 @@ class MyEvent extends AbstractEvent {
     long accountId
     Date someDate
     String foo
-    String bar
     
     // Define the partition logic for Kinesis Stream sharding
     String getPartitionKey() {
@@ -146,11 +230,11 @@ class MyEvent extends AbstractEvent {
     static MyEvent unmarshall(String json) {
         JSONObject jsonObject = JSON.parse(json) as JSONObject
         MyEvent event = new MyEvent(
-            accountId: jsonObject.accountId.toLong(),
             consumerFilterKey: jsonObject.consumerFilterKey,
-            date: JsonDateUtils.parseJsonDate(jsonObject.date as String),
             partitionKey: jsonObject.partitionKey,
-            
+            accountId: jsonObject.accountId.toLong(),
+            foo: jsonObject.foo,
+            someDate: JsonDateUtils.parseJsonDate(jsonObject.someDate as String)
         )
         event
     }
@@ -158,67 +242,25 @@ class MyEvent extends AbstractEvent {
 }
 ```
 
-## Recording stream events
+## Recording a stream event
 
 ```groovy
-// Put a record
-sequenceNumber = amazonKinesisService.putEvent(new MyEvent(
+event = new MyEvent(
             accountId: 123456789,
-            someDate: new Date(),
-            foo: 'foo',
-            bar: 'bar'
-))
+            someDate: new Date() + 7,
+            foo: 'foo'
+)
+
+// Put a single event
+sequenceNumber = amazonKinesisService.putEvent('MyStream', event)
+// Or if you have define default stream
+sequenceNumber = amazonKinesisService.putEvent(event)
+
+// Put multiple events
+sequenceNumber = amazonKinesisService.putEvents('MyStream', events)
+// Or if you have define default stream
+sequenceNumber = amazonKinesisService.putEvents(events)
 ```
-
-## Managing streams
-
-Here are some utility methods to debug streams. But you will probably use a consumer based on [Kinesis Client Library](http://docs.aws.amazon.com/kinesis/latest/dev/developing-consumers-with-kcl.html) to handle events.
-
-```groovy
-// List streams
-amazonKinesisService.listStreamNames().each {
-    println it
-}
-
-// Describe stream
-stream = amazonKinesisService.describeStream()
-
-// List shards
-amazonKinesisService.listShards().each {
-    println it
-}
-
-// Get a shard
-shard = amazonKinesisService.getShard('shardId-000000000002')
-
-// Get oldest record
-record = amazonKinesisService.getShardOldestRecord(shard)
-println record
-println amazonKinesisService.decodeRecordData(record)
-
-// Get record at sequence number
-record = amazonKinesisService.getShardRecordAtSequenceNumber(shard, '49547417246700595154645683227660734817370104972359761954')
-println record
-println amazonKinesisService.decodeRecordData(record)
-
-// List oldest records
-amazonKinesisService.listShardRecordsFromHorizon(shard, 100).each { record ->
-    println record
-    println amazonKinesisService.decodeRecordData(record)
-}
-
-// List records after sequence number
-amazonKinesisService.listShardRecordsAfterSequenceNumber(shard, '49547417246700595154645683227660734817370104972359761954', 100).each { record ->
-    println record
-    println amazonKinesisService.decodeRecordData(record)
-}
-```
-
-If required, you can also directly use **AmazonKinesisClient** instance available at **amazonKinesisService.client**.
-
-For more info, AWS SDK for Java documentation is located here:
-
-* [AWS SDK for Java](http://docs.amazonwebservices.com/AWSJavaSDK/latest/javadoc/index.html)
 
 ## Consuming stream events
 
@@ -226,7 +268,7 @@ To create a client based on [Kinesis Client Library](http://docs.aws.amazon.com/
 
 ### Event consumer service
 
-Handle and process each event. This is where you put all your business logic.
+The event consumer service handles and processes each event. This is where you put all your business logic.
 
 ```groovy
 import grails.plugins.awssdk.kinesis.AbstractEventService
@@ -243,7 +285,7 @@ class MyStreamEventService extends AbstractEventService {
 
 ### Record processor
 
-Unmarshall a single record, create the corresponding event and pass it to the handling consumer service.
+The record processor unmarshalls a single record, create the corresponding event and pass it to the event consumer service.
 
 ```groovy
 import com.amazonaws.services.kinesis.model.Record
@@ -275,9 +317,9 @@ class MyStreamRecordProcessor extends AbstractRecordProcessor {
 }
 ```
 
-### Record Processor factory
+### Record processor factory
 
-Create the record processor.
+The record processor factory creates the record processor with its event consumer service.
 
 ```groovy
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessor
@@ -295,11 +337,13 @@ class MyStreamRecordProcessorFactory implements IRecordProcessorFactory {
 }
 ```
 
-### Event consumer client service
+### Stream client service
 
 Boostrap everything by creating the record processor factory and initializing the client.
 
 If required, during bootstrap, it will automatically create the corresponding Kinesis stream and DynamoDB table for consumer checkpoints.
+
+Once initialized, the client will check every `IDLETIME_BETWEEN_READS_MILLIS` to see if there is new records to process.
 
 ```groovy
 import grails.plugins.awssdk.kinesis.AbstractClientService
@@ -325,6 +369,8 @@ class MyStreamClientService extends AbstractClientService {
 
 }
 ```
+
+## Advanced usage
 
 If required, you can also directly use **AmazonKinesisClient** instance available at **amazonKinesisService.client**.
 

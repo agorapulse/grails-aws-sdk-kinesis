@@ -1,6 +1,6 @@
 ---
 grails:
-    profile: web-plugin
+    profile: plugin
     codegen:
         defaultPackage: grails.plugins.awssdk
     spring:
@@ -11,4 +11,3 @@ info:
         name: '@info.app.name@'
         version: '@info.app.version@'
         grailsVersion: '@info.app.grailsVersion@'
-

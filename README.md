@@ -25,6 +25,12 @@ This plugin encapsulates **Amazon Kinesis** related logic.
 Add plugin dependency to your `build.gradle`:
 
 ```groovy
+repositories {
+    ...
+    maven { url "http://dl.bintray.com/agorapulse/plugins" } // TEMP, to remove once the plugin is officially released
+    ...
+}
+
 dependencies {
   ...
   compile 'org.grails.plugins:aws-sdk-kinesis:2.0.0-beta1'

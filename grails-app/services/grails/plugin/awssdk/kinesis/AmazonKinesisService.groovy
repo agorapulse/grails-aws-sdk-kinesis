@@ -2,7 +2,7 @@ package grails.plugin.awssdk.kinesis
 
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.regions.Region
-import com.amazonaws.regions.ServiceAbbreviations
+import com.amazonaws.services.kinesis.AmazonKinesis
 import com.amazonaws.services.kinesis.AmazonKinesisClient
 import com.amazonaws.services.kinesis.model.*
 import grails.core.GrailsApplication
@@ -19,7 +19,7 @@ import java.nio.charset.CharsetEncoder
 @Log4j
 class AmazonKinesisService implements InitializingBean {
 
-    static SERVICE_NAME = ServiceAbbreviations.Kinesis
+    static SERVICE_NAME = AmazonKinesis.ENDPOINT_PREFIX
 
     static String DEFAULT_SHARD_ITERATOR_TYPE = 'LATEST'
     static long DEFAULT_GET_RECORDS_WAIT = 1000 // wait for 1s before getting next batch

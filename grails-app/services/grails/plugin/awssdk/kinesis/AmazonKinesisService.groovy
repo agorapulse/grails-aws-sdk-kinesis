@@ -44,7 +44,9 @@ class AmazonKinesisService implements InitializingBean {
         client = new AmazonKinesisClient(credentials, configuration)
                 .withRegion(region)
 
-        defaultStreamName = serviceConfig?.stream ?: ''
+        if (!defaultStreamName) {
+            defaultStreamName = serviceConfig?.stream ?: ''
+        }
     }
 
     protected void init(String streamName) {

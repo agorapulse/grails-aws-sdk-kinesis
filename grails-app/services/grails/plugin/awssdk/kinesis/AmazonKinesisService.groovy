@@ -31,7 +31,7 @@ class AmazonKinesisService implements InitializingBean {
 
     GrailsApplication grailsApplication
     AmazonKinesisClient client
-    private String defaultStreamName = ''
+    protected String defaultStreamName = ''
 
     void afterPropertiesSet() throws Exception {
         // Set region

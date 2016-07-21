@@ -397,24 +397,28 @@ class AmazonKinesisService implements InitializingBean {
      *
      * @param streamName
      * @param event
+     * @param sequenceNumberForOrdering
      * @return
      */
     String putEvent(String streamName,
-                    AbstractEvent event) {
+                    AbstractEvent event,
+                    String sequenceNumberForOrdering = '') {
         if (serviceConfig?.consumerFilterKey) {
             event.consumerFilterKey = serviceConfig?.consumerFilterKey
         }
-        putRecord(streamName, event.partitionKey, event.encodeAsJSON().toString())
+        putRecord(streamName, event.partitionKey, event.encodeAsJSON().toString(), sequenceNumberForOrdering)
     }
 
     /**
      *
      * @param event
+     * @param sequenceNumberForOrdering
      * @return
      */
-    String putEvent(AbstractEvent event) {
+    String putEvent(AbstractEvent event,
+                    String sequenceNumberForOrdering = '') {
         assertDefaultStreamName()
-        putEvent(defaultStreamName, event)
+        putEvent(defaultStreamName, event, sequenceNumberForOrdering)
     }
 
     /**

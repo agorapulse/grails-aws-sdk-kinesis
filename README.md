@@ -22,21 +22,17 @@ The following services are currently supported:
 
 This plugin adds support for [Amazon Kinesis](https://aws.amazon.com/kinesis/), a platform for streaming data on AWS, offering powerful services to make it easy to load and analyze streaming data, and also providing the ability for you to build custom streaming data applications for specialized needs.
 
+It's a Grails wrapper around the officieal [Amazon Kinesis Client](https://github.com/awslabs/amazon-kinesis-client).
+
 
 # Installation
 
 Add plugin dependency to your `build.gradle`:
 
 ```groovy
-repositories {
-    ...
-    maven { url "http://dl.bintray.com/agorapulse/plugins" } // TEMP, to remove once the plugin is officially released
-    ...
-}
-
 dependencies {
   ...
-  compile 'org.grails.plugins:aws-sdk-kinesis:2.0.0-beta8'
+  compile 'org.grails.plugins:aws-sdk-kinesis:2.0.0'
   ...
 ```
 

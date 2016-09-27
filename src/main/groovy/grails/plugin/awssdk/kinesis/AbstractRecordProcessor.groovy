@@ -7,13 +7,11 @@ import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessor
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer
 import com.amazonaws.services.kinesis.clientlibrary.types.ShutdownReason
 import com.amazonaws.services.kinesis.model.Record
-import groovy.util.logging.Log4j
 
 import java.nio.charset.CharacterCodingException
 import java.nio.charset.Charset
 import java.nio.charset.CharsetDecoder
 
-@Log4j
 abstract class AbstractRecordProcessor implements IRecordProcessor {
 
     // Backoff and retry settings

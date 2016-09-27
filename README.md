@@ -295,10 +295,8 @@ The record processor unmarshalls a single record, create the corresponding event
 ```groovy
 import com.amazonaws.services.kinesis.model.Record
 import grails.plugins.awssdk.kinesis.AbstractRecordProcessor
-import groovy.util.logging.Log4j
 import org.grails.web.converters.exceptions.ConverterException
 
-@Log4j
 class MyStreamRecordProcessor extends AbstractRecordProcessor {
 
     MyStreamEventService myStreamEventService

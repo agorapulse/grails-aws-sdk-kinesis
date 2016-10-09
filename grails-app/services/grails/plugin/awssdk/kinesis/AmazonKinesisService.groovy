@@ -8,6 +8,7 @@ import com.amazonaws.services.kinesis.model.*
 import grails.core.GrailsApplication
 import grails.plugin.awssdk.AwsClientUtil
 import groovy.util.logging.Commons
+import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.InitializingBean
 
 import java.nio.ByteBuffer
@@ -16,7 +17,7 @@ import java.nio.charset.Charset
 import java.nio.charset.CharsetDecoder
 import java.nio.charset.CharsetEncoder
 
-@Commons
+@Slf4j
 class AmazonKinesisService implements InitializingBean {
 
     static SERVICE_NAME = AmazonKinesis.ENDPOINT_PREFIX

@@ -59,6 +59,8 @@ task wrapper(type: Wrapper) {
 }
 
 grailsPublish {
+    user = System.getenv("BINTRAY_USER") ?: project.bintrayUser
+    key = System.getenv("BINTRAY_KEY") ?: project.bintrayKey
     userOrg = 'agorapulse'
     githubSlug = "agorapulse/grails-$project.name"
     license {
@@ -67,6 +69,6 @@ grailsPublish {
     title = "AWS SDK Kinesis"
     desc = "Grails AWS SDK Kinesis plugin"
     developers = [benorama:"Benoit Hediard"]
-    portalUser = ""
-    portalPassword = ""
+    portalUser = System.getenv("GRAILS_PORTAL_USER") ?: project.grailsPortalUser
+    portalPassword = System.getenv("GRAILS_PORTAL_PASSWORD") ?: project.grailsPortalPassword
 }

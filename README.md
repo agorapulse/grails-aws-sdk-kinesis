@@ -32,7 +32,7 @@ Add plugin dependency to your `build.gradle`:
 ```groovy
 dependencies {
   ...
-  compile 'org.grails.plugins:aws-sdk-kinesis:2.0.4'
+  compile 'org.grails.plugins:aws-sdk-kinesis:2.0.5'
   ...
 ```
 

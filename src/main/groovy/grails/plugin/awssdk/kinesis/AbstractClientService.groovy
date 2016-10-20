@@ -44,6 +44,9 @@ abstract class AbstractClientService {
             log.info "Ignoring stream client bootstraping in env ${Environment.current} for stream $streamName"
             return
         }
+        if (config.kinesis?.containsKey('enabled') && !config.kinesis.enabled) {
+            log.info "Ignoring stream client bootstraping (disabled in config)"
+        }
 
         if (config.accessKey && config.secretKey) {
             // For local testing (on prod/beta EC2 role is used by AWS Credentials provider chain)

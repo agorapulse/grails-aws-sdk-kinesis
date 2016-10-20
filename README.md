@@ -94,6 +94,7 @@ grails:
                 region: eu-west-1       # (optional)
                 stream: MyStream        # (optional)
                 consumerFilterKey: ben  # (optional)
+                enabled: false          # (optional, default to tru)
             
 ```
 

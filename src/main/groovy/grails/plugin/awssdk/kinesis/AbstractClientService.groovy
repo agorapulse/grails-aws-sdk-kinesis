@@ -46,6 +46,7 @@ abstract class AbstractClientService {
         }
         if (config.kinesis?.containsKey('enabled') && !config.kinesis.enabled) {
             log.info "Ignoring stream client bootstraping (disabled in config)"
+            return
         }
 
         if (config.accessKey && config.secretKey) {
